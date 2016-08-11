@@ -77,7 +77,6 @@ class updation:
             unpack_cmd = "tar -xvf %s.tar -C %s" % (self.get_path, self.get_path)
             result = Popen(unpack_cmd, stdout=PIPE, stderr=PIPE, shell=True)
             stdout, stderr = result.communicate()
-            logger.info(stdout, stderr)
         except:
             raise
 
@@ -91,18 +90,18 @@ class updation:
             z.extractall(self.extract_path)
             logger.info("Unpacking %s" % self.extract_path)
         except:
-            raise Exception("Extraction Error")
+            raise
         try:
             logger.info("Copying new files to %s" % self.app_home_dir)
-            replace_cmd = "cp -Prf %s %s" % (self.extract_path.rstrip("/"), self.app_home_dir)
+            replace_cmd = "cp -Prf %s/* %s/" % (self.extract_path.rstrip("/"), self.app_home_dir)
             result = Popen(replace_cmd, stdout=PIPE, stderr=PIPE, shell=True)
             stdout, stderr = result.communicate()
-            logger.info(stdout, stderr)
+            logger.info(stdout)
             logger.info("Copying new buildinfo.ini to %s" % self.app_home_dir)
             copy_buildinfo = "cp -f %s %s/buildinfo.ini" % (self.buildInfo_path, self.app_home_dir)
             result = Popen(copy_buildinfo, stdout=PIPE, stderr=PIPE, shell=True)
             stdout, stderr = result.communicate()
-            logger.info(stdout, stderr)
+            logger.info(stdout)
         except:
             raise
 
@@ -128,7 +127,7 @@ class updation:
             logger.info("Old revision %s" % revision_old)
             return revision_new, revision_old
         except:
-            raise Exception("Configuration file Error")
+            raise
 
 
 def main():
@@ -142,7 +141,7 @@ def main():
             files = os.listdir(RUpdate.get_path)
             for file in files:
                 if file.endswith(".zip"):
-                    RUpdate.unpack_replace(file)
+                    RUpdate.unpack_replace(os.path.abspath(os.path.join(RUpdate.get_path,file)))
     else:
         print parser.print_help()
 
