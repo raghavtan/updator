@@ -8,7 +8,10 @@ from subprocess import PIPE, Popen
 import zipfile
 import logging
 from logging import config
-import yaml
+try:
+    import yaml
+except:
+    pass
 import argparse
 
 #################  LOGGING CONFIGS  ######################
@@ -133,7 +136,8 @@ class updation:
 def main():
     args = parse_args()
     if args.path and args.url:
-        logger.info("Application home:%s\nUrl to download:%s" % (args.path, args.url))
+        logger.info("Application home : %s" %args.path)
+        logger.info("Url to download : %s" %args.url)
         RUpdate = updation(args.path, args.url)
         RUpdate.get_app()
         rev_new, rev_old = RUpdate.read_revision()
