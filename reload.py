@@ -7,7 +7,10 @@ import urllib2
 from subprocess import PIPE, Popen
 import zipfile
 import logging
+import subprocess
+import shlex
 from logging import config
+
 try:
     import yaml
 except:
@@ -42,6 +45,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Updation utilities')
     parser.add_argument("path", help='specify the home path for application directory to be updated')
     parser.add_argument("url", help='specify the url to fetch tar')
+    parser.add_argument("-e", "--extra-args", help='Arguments for shell script eg -e ARG1,ARG2,ARG3....')
     return parser.parse_args()
 
 
@@ -80,6 +84,8 @@ class updation:
             unpack_cmd = "tar -xvf %s.tar -C %s" % (self.get_path, self.get_path)
             result = Popen(unpack_cmd, stdout=PIPE, stderr=PIPE, shell=True)
             stdout, stderr = result.communicate()
+            if stderr:
+                logger.info(stderr)
         except:
             raise
 
@@ -100,11 +106,15 @@ class updation:
             result = Popen(replace_cmd, stdout=PIPE, stderr=PIPE, shell=True)
             stdout, stderr = result.communicate()
             logger.info(stdout)
+            if stderr:
+                logger.info(stderr)
             logger.info("Copying new buildinfo.ini to %s" % self.app_home_dir)
             copy_buildinfo = "cp -f %s %s/buildinfo.ini" % (self.buildInfo_path, self.app_home_dir)
             result = Popen(copy_buildinfo, stdout=PIPE, stderr=PIPE, shell=True)
             stdout, stderr = result.communicate()
             logger.info(stdout)
+            if stderr:
+                logger.info(stderr)
         except:
             raise
 
@@ -132,20 +142,48 @@ class updation:
         except:
             raise
 
+    def shell_execute(self, shell_file=None, args_list=None):
+        try:
+            if shell_file:
+                if args_list:
+                    args = args_list
+                else:
+                    args = ""
+                shell_script = os.path.abspath(os.path.join(self.get_path, shell_file))
+                subprocess.call(shlex.split('./%s %s') % (shell_script, args))
+        except:
+            raise
+
+    def cleanUp(self):
+        try:
+            if os.path.exists(self.get_path):
+                logger.info("Cleaning up temporary files")
+                os.rmdir(self.get_path)
+        except:
+            raise
+
 
 def main():
     args = parse_args()
     if args.path and args.url:
-        logger.info("Application home : %s" %args.path)
-        logger.info("Url to download : %s" %args.url)
+        arguments = None
+        if args.extra_args:
+            arguments = args.extra_args.replace(",", " ")
+        logger.info("Application home : %s" % args.path)
+        logger.info("Url to download : %s" % args.url)
         RUpdate = updation(args.path, args.url)
         RUpdate.get_app()
         rev_new, rev_old = RUpdate.read_revision()
         if rev_new > rev_old:
+            shell_file = None
             files = os.listdir(RUpdate.get_path)
             for file in files:
                 if file.endswith(".zip"):
-                    RUpdate.unpack_replace(os.path.abspath(os.path.join(RUpdate.get_path,file)))
+                    RUpdate.unpack_replace(os.path.abspath(os.path.join(RUpdate.get_path, file)))
+                elif file.endswith(".sh"):
+                    shell_file = file
+            RUpdate.shell_execute(shell_file, arguments)
+        RUpdate.cleanUp()
     else:
         print parser.print_help()
 
